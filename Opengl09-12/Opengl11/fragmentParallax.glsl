@@ -1,0 +1,50 @@
+#version 450
+
+out vec4 FragColor;
+in vec3 lightDir;
+in vec3 viewDir;
+in vec2 tcoord;
+
+uniform float shininess;
+uniform vec3 L;
+uniform vec3 Ks;
+uniform vec3 La;
+uniform sampler2D colorTex;
+uniform sampler2D normalTex;
+uniform sampler2D heightTex;
+
+vec3 phongModel()
+{
+
+    vec3 color = texture(colorTex, tcoord).rgb;
+    
+    vec3 s = normalize(lightDir);
+    vec3 v = normalize(viewDir);
+    
+    const float bumpFactor = 0.009;
+    float height = 1 - texture(heightTex, tcoord).r;
+    vec2 delta = vec2(v.x, v.y) * height * bumpFactor/v.z;
+    vec2 tc = tcoord.xy - delta;
+    
+    vec3 n = texture(normalTex, tcoord).xyz;
+	n.xy = 2.0 * n.xy -1.0;
+	n = normalize(n);
+	
+    vec3 ambient = La*color;
+    float sDotN = max(dot(s,n),0.0);
+    vec3 difuse = color*sDotN;
+    vec3 specular = vec3(0.0);
+    if(sDotN > 0.0){
+        vec3 h = normalize(v + s);
+        specular = Ks*pow(max(dot(h,n),0.0),shininess);
+    }    
+	return ambient + L*(specular+difuse);
+}
+
+void main()
+{	
+    vec3 c = phongModel();
+    c = pow(c, vec3(1.0/2.2));
+	FragColor = vec4(c,1.0);
+}
+
